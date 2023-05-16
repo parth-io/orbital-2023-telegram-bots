@@ -64,6 +64,21 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     #TODO 4
     pass
 
+# Imports for quadratic and cat
+import math
+from random import random
+def quadratic(update, context):
+    # This will give us all the words in the message, which will be something like "/quadratic 1 2 3"
+    # Hint: You can use the `split()` method of a Python string
+    # TODO 5
+    pass
+    
+def cat(update, context):
+    url = f"https://cataas.com/cat?id={number}"
+    #Hint: You can use the `reply_photo()` method
+    # TODO 6
+    pass
+
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors caused by updates."""
     logger.error('Update "%s" caused error "%s"', update, context.error)
@@ -82,6 +97,9 @@ def main() -> None:
     
     # Error handler
     application.add_error_handler(error)
+    
+    # Add your quadratic and cat handlers here
+    # TODO 7
 
     # We pass in the Telegram event loop as a nested event loop here - only for Jupyter
     loop = asyncio.get_event_loop()

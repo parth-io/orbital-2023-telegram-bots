@@ -71,6 +71,35 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """In the case of an unknown command"""
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
+import math
+from random import random
+async def quadratic(update, context) -> None:
+    # This will give us all the words in the message, which will be something like "/quadratic 1 2 3"
+    all_words = update.message.text.split(" ")
+
+    # We convert terms from index 1 to 3 to an array of integers
+    terms = list(map(lambda x: int(x), all_words[1:]))
+    a = terms[0]
+    b = terms[1]
+    c = terms[2]
+
+    # discriminant
+    disc = math.sqrt(b ** 2 - 4 * a * c)
+
+    sol1 = (-b + disc) / 2 * a
+    sol2 = (-b - disc) / 2 * a
+
+    reply = f"Your roots are {sol1} and {sol2}"
+
+    await update.message.reply_text(reply)
+
+
+async def cat(update, context) -> None:
+    number = int(random() * 100000)
+    url = f"https://cataas.com/cat?id={number}"
+
+    await update.message.reply_photo(photo=url)
+
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors caused by updates."""
     logger.error('Update "%s" caused error "%s"', update, context.error)
@@ -93,6 +122,11 @@ def main() -> None:
     application.add_handler(help_handler) # beware of the order
     application.add_handler(echo_handler)
     application.add_handler(inline_caps_handler)
+    
+    # Add your quadratic and cat handlers here
+    application.add_handler(CommandHandler("quadratic", quadratic))
+    application.add_handler(CommandHandler("cat", cat))
+    
     application.add_handler(unknown_handler) # beware of the order
     
     application.add_error_handler(error)
