@@ -1,9 +1,9 @@
 import logging
+import asyncio
 import time
-
 import requests
-from telegram import bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import Bot, Update
+from telegram.ext import ApplicationBuilder, ContextTypes
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -13,40 +13,26 @@ logger = logging.getLogger(__name__)
 
 token = "[YOUR TOKEN HERE]"
 
-
-def error(update, context):
-    """Log Errors caused by Updates."""
-    logger.warning('Update "%s" caused error "%s"', update, context.error)
-
-
-def manual_poll(updater):
+async def manual_poll(application):
     while True:
-        r = requests.get("http://localhost:5000")
+        r = requests.get("http://206.189.92.77")
         if "Blue" in str(r.content):
-            updater.bot.send_message(chat_id="YOUR CHAT ID HERE", text="aha!")
+            await application.bot.send_message(chat_id="1113648650", text="The sky is meant to be blue for us Earthies")
+            time.sleep(60 * 60 * 24 - 1) # wait for the next day's colour
+        time.sleep(1) # sleep for a while, to avoid overloading the server
 
-        time.sleep(1)
+async def error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log errors caused by updates."""
+    logger.error('Update "%s" caused error "%s"', update, context.error)
 
-
-def main():
+def main() -> None:
     """Start the bot."""
-    # Create the Updater and pass it your bot's token.
-    # Make sure to set use_context=True to use the new context based callbacks
-    # Post version 12 this will no longer be necessary
-    updater = Updater(token, use_context=True)
+    application = ApplicationBuilder().token(token).build()
+    
+    # Error handler
+    application.add_error_handler(error)
 
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
-
-    # log all errors
-    dp.add_error_handler(error)
-    manual_poll(updater)
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
-
-
+    asyncio.run(manual_poll(application))
+    
 if __name__ == '__main__':
     main()

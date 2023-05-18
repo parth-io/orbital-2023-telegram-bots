@@ -18,10 +18,8 @@ bot.
 import asyncio
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from telegram import InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import InlineQueryHandler
-from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes, InlineQueryHandler
 
 # Enable logging
 import logging
@@ -73,6 +71,7 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 import math
 from random import random
+import datetime
 async def quadratic(update, context) -> None:
     # This will give us all the words in the message, which will be something like "/quadratic 1 2 3"
     all_words = update.message.text.split(" ")
@@ -95,8 +94,8 @@ async def quadratic(update, context) -> None:
 
 
 async def cat(update, context) -> None:
-    number = int(random() * 100000)
-    url = f"https://cataas.com/cat?id={number}"
+    timestamp = datetime.datetime.now().isoformat()
+    url = f"https://cataas.com/cat?a={timestamp}" # As Telegram caches the URL
 
     await update.message.reply_photo(photo=url)
 

@@ -5,10 +5,8 @@
 import asyncio
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from telegram import InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import InlineQueryHandler
-from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes, InlineQueryHandler
 
 # Enable logging
 import logging
@@ -67,14 +65,16 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Imports for quadratic and cat
 import math
 from random import random
-def quadratic(update, context):
+import datetime
+async def quadratic(update, context) -> None:
     # This will give us all the words in the message, which will be something like "/quadratic 1 2 3"
     # Hint: You can use the `split()` method of a Python string
     # TODO 5
     pass
     
-def cat(update, context):
-    url = f"https://cataas.com/cat?id={number}"
+async def cat(update, context) -> None:
+    timestamp = datetime.datetime.now().isoformat()
+    url = f"https://cataas.com/cat?a={timestamp}" # As Telegram caches the URL
     #Hint: You can use the `reply_photo()` method
     # TODO 6
     pass
@@ -102,8 +102,11 @@ def main() -> None:
     # TODO 7
 
     # We pass in the Telegram event loop as a nested event loop here - only for Jupyter
-    loop = asyncio.get_event_loop()
-    loop.create_task(application.run_polling())
+    # Python version < 3.7
+    # loop = asyncio.get_event_loop()
+    # loop.create_task(application.run_polling())
+    # Python version >= 3.7
+    asyncio.run(application.run_polling())
 
 if __name__ == '__main__':
     main()
