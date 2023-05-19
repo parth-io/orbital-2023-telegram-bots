@@ -1,19 +1,8 @@
 import json
 import logging
 
-from telegram import (
-    ReplyKeyboardMarkup,
-    Update
-)
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    ConversationHandler,
-    MessageHandler,
-    Filters,
-    CallbackContext
-)
-
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes, ConversationHandler
 
 token = "[YOUR TOKEN HERE]"
 
@@ -27,15 +16,16 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 # Class defining an attendance session
+from typing import Dict, List
+
 class AttendanceSession:
     def __init__(self, chat_id: int, message_id: int, message: str) -> None:
         self.chat_id = chat_id
         self.message_id = message_id
         self.message = message
 
-    def to_json(self) -> dict:
+    def to_json(self) -> Dict:
         json_data = {
             'chat_id': self.chat_id,
             'message_id': self.message_id,
@@ -48,8 +38,8 @@ class AttendanceSession:
 # eventually be persisted to a database of some sort, but for now
 # we store it all in the program's runtime memory.
 CLASS_TO_STUDENTS = {
-    "XII-A": {
-        "Simon": "simonjulianl"
+    "MKT3702": {
+        "Teh Kari": "gparth26"
     }
 }
 STUDENTS_TO_CLASS = {}
@@ -62,10 +52,10 @@ SESSION_TO_ATTENDANCE = {}
 ########################################
 
 
-def start(update: Update, _: CallbackContext) -> None:
+async def start(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
     global USERNAME_TO_IDS
     USERNAME_TO_IDS[update.message.from_user.username] = update.message.from_user.id
-    update.message.reply_text(
+    await update.message.reply_text(
         'Welcome! Your username has been stored in our very secure servers.')
 
 
@@ -74,52 +64,49 @@ def start(update: Update, _: CallbackContext) -> None:
 ########################################
 
 
-def start_attendance_session(update: Update, _: CallbackContext) -> None:
+async def start_attendance_session(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
     # Keyboard for choosing class
     keyboard = [
         [class_str for class_str in CLASS_TO_STUDENTS.keys()]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    update.message.reply_text('Choose class:', reply_markup=reply_markup)
+    await update.message.reply_text('Choose class:', reply_markup=reply_markup)
 
     return CLASS
 
 
-def class_handler(update: Update, context: CallbackContext) -> None:
+async def class_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Create attendance session
     chat_id = update.message.from_user.id
-    message_text = f'Attendance session for {update.message.text}:'
-    message = update.message.reply_text(message_text)
+    classname = update.message.text
+    message_text = f'Attendance session for {classname}:'
+    message = await update.message.reply_text(message_text)
     session = AttendanceSession(
         chat_id=chat_id, message_id=message.message_id, message=message_text)
 
     # Save session in dictionary
-    CLASS_TO_SESSION[update.message.text] = session.to_json()
+    CLASS_TO_SESSION[classname] = session.to_json()
 
     # Send message to students in class
-    class_list = CLASS_TO_STUDENTS[update.message.text].values()
-    update.message.reply_text('Sending attendance messages...')
-    send_attendance_messages(context, class_list)
+    class_list = CLASS_TO_STUDENTS[classname].values()
+    await update.message.reply_text('Sending attendance messages...')
+    await send_attendance_messages(context, class_list, classname)
 
     return ConversationHandler.END
 
 
 # Command to cancel ConversationHandler
-
-
-def cancel(update: Update, _: CallbackContext) -> None:
-    update.message.reply_text('Attendance session creation has been canceled.')
+async def cancel(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('Attendance session creation has been canceled.')
 
 
 # Send messages to all users in usernames
-
-# JK, list is for Python3.5 so how do we debug this? 
-def send_attendance_messages(context: CallbackContext, usernames: list[str]) -> None:
+async def send_attendance_messages(context: ContextTypes.DEFAULT_TYPE, usernames: List[str], classname: str) -> None:
     for username in usernames:
         chat_id = USERNAME_TO_IDS[username]
-        context.bot.send_message(
+        await context.bot.send_message(
             chat_id=chat_id,
-            text='Mark attendance!'
+            text=f'Mark attendance for {classname}!'
         )
 
 
@@ -128,14 +115,14 @@ def send_attendance_messages(context: CallbackContext, usernames: list[str]) -> 
 ########################################
 
 
-def mark_attendance(update: Update, context: CallbackContext) -> None:
+async def mark_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Get attendance session
     classname = STUDENTS_TO_CLASS[update.message.from_user.username]
     session = json.loads(CLASS_TO_SESSION[classname])
 
     session_chat_id = session.get('chat_id')
     user_name = f'{update.message.from_user.first_name}' 
-    context.bot.edit_message_text(
+    await context.bot.edit_message_text(
         text=update_attendance_message(
             session, user_name),
         chat_id=session_chat_id,
@@ -146,10 +133,10 @@ def mark_attendance(update: Update, context: CallbackContext) -> None:
         SESSION_TO_ATTENDANCE[session_chat_id] = []
 
     SESSION_TO_ATTENDANCE[session_chat_id].append(user_name)
-    update.message.reply_text("Attendance marked!")
+    await update.message.reply_text("Attendance marked!")
 
-def show_attendance(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(str(SESSION_TO_ATTENDANCE))
+async def show_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(str(SESSION_TO_ATTENDANCE))
 
 def update_attendance_message(session: dict, username: str) -> str:
     session['message'] += '\n' + username
@@ -171,36 +158,27 @@ def main() -> None:
     # Init data
     init_data()
 
-    # Create the Updater and pass it your bot's token.
-    updater = Updater(token)
-
-    # Get the dispatcher to register handlers
-    dispatcher = updater.dispatcher
-
-    # Add command handlers
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('mark_attendance', mark_attendance))
-    dispatcher.add_handler(CommandHandler('show_attendance', show_attendance))
-
+    """Start the bot."""
+    application = ApplicationBuilder().token(token).build()
+    
+    #Command handlers
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('mark_attendance', mark_attendance))
+    application.add_handler(CommandHandler('show_attendance', show_attendance))
+    
     # Add conversation handler with to start attendance session
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler(
             'start_attendance', start_attendance_session)],
         states={
-            CLASS: [MessageHandler(Filters.text, class_handler)],
+            CLASS: [MessageHandler(filters.TEXT, class_handler)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
 
-    dispatcher.add_handler(conv_handler)
+    application.add_handler(conv_handler)
 
-    # Start the Bot
-    updater.start_polling()
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
+    application.run_polling()
 
 
 if __name__ == '__main__':
